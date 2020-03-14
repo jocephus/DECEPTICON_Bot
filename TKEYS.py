@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+
+CONSUMER_KEY = '' 
+CONSUMER_SECRET = '' 
+ACCESS_TOKEN_KEY = '' 
+ACCESS_TOKEN_SECRET = ''
