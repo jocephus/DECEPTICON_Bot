@@ -17,6 +17,9 @@ import sklearn
 import h5py
 import tensorflow as tf
 import keras
+#NLP Imports
+import nltk
+from nltk.tokenize import word_tokenize, sent_tokenize
 
 PYTHONIOENCODING="UTF-8"
 
@@ -25,114 +28,65 @@ def login():
         print("Connected to Twitter")
         collection(api)
 
+def lexical_diversity(text):
+        return len(set(text)) / len(text)
+
 def collection(api):
         results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
         print("Retrieving Tweets...")
-        print("\n\n\n")
+        print("\n")
         mainDF = pd.DataFrame(columns=['Times', 'Tweets'])
+        directory = os.getcwd()
+        if os.path.isdir('./corpus') == False:
+                os.makedirs('corpus')
+        os.chdir(directory + '/corpus')
+        new_dir = os.getcwd()
+        print(f'Current Directory:\t {new_dir}\n\n')
         for tweet in results:
                 fText = tweet.full_text
                 fSplit = str(fText.split(' , '))
                 tTime = tweet.created_at #Getting the UTC time
                 mTime = time.mktime(time.strptime(tTime, "%a %b %d %H:%M:%S %z %Y"))
                 eTime = int(mTime)
-                mainDF = mainDF.append({'Tweets': fSplit, 'Times': eTime}, ignore_index=True)
+                #mainDF = mainDF.append({'Tweets': fSplit, 'Times': eTime}, ignore_index=True)
         ### Testing Area ###
-
-
-        print(mainDF.Tweets.value_counts())
-        ### Testing Area ###
-        #prepreprocessing(results, tweet, mainDF, eTime, fText, fSplit, api)
-
-def prepreprocessing(results, tweet, mainDF, eTime, fText, fSplit, api):
+                ld = lexical_diversity(str(tweet))
+                mainDF = mainDF.append({'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
+                for index, r in mainDF.iterrows():
+                        tweets=r['Tweets']
+                        times=r['Times']
+                        fname=str(user)+'_'+str(times)+'.txt'
+                        corpusfile=open(new_dir+'/'+fname, 'a')
+                        corpusfile.write(str(tweets))
+                        #print(f"The lexical diversity of this tweet: {times} is {ld}")
+                        tokenized_tweets = sent_tokenize(str(tweets))
+                        #print(tokenized_tweets)
+                        corpusfile.close()
+                        f1name=str(user)+'.txt'
+                        mainfile=open(new_dir+'/'+f1name, 'a')
+                mainfile.write(str(tweets))
+        print(mainDF)
+        ld2 = lexical_diversity(str(mainfile))
+        print(f'\nThe Lexical Diversity of all Tweets is:\t\t\t{ld2}')
+        ld3 = np.mean(mainDF['LD'].describe())
+        print(f'The Statistical Lexical Diversity of all Tweets is:\t{ld3}')
+        ld4 = np.std(mainDF['LD'].describe())
+        print(f'The StdDev of Lexical Diversity of all Tweets is:\t{ld4}')
         timeStdDev = np.std(mainDF['Times'].describe())
         print("\n\nTweets occur at this interval:\t\n")
         postInterval = int(timeStdDev)
         print(f"\t{postInterval} seconds apart.\n\n")
-        directory = os.getcwd()
         if os.path.isdir('./corpus') == False:
                 os.makedirs('corpus')
-                preprocessing(results, tweet, mainDF, eTime, fText, fSplit, directory, api)
-        else:
-                preprocessing(results, tweet, mainDF, eTime, fText, fSplit, directory, api)
+                #preprocessing(mainDF)
+        #else:
+                #preprocessing(mainDF)
 
-def lexical_diversity(text):
-        return len(set(text)) / len(text)
-
-def preprocessing(results, tweet, mainDF, eTime, fText, fSplit, directory, api):
-        os.chdir(directory + '/corpus')
-        new_dir = os.getcwd()
-        print(new_dir)
-        for index, r in mainDF.iterrows():
-                tweets=r['Tweets']
-                times=r['Times']
-                fname=str(user)+'_'+str(times)+'.txt'
-                corpusfile=open(new_dir+'/'+fname, 'a')
-                corpusfile.write(str(tweets))
-                ld = lexical_diversity(str(corpusfile))
-                print(f"The lexical diversity of this tweet: {times} is {ld}")
-                tokenized_tweets = sent_tokenize(str(tweets))
-                print(tokenized_tweets)
-                corpusfile.close()
-                f1name=str(user)+'.txt'
-                mainfile=open(new_dir+'/'+f1name, 'a')
-                mainfile.write(str(tweets))
-        ld = lexical_diversity(str(mainfile))
-        print(f"The lexical diversity of all tweets is: {ld}")
-        nlpClean(new_dir, f1name, mainDF, tweets)
-
-# New RNN code will start here
-
-def nlpClean(new_dir, f1name, mainDF, tweets):
-        files = [open(new_dir+'/'+f, 'r').read() for f in os.listdir(new_dir)]
-        all_words = []
-        documents = []
-
-        for p in files:
-                documents.append(p)
-                cleaned = re.sub(r'https\:\/\/t\.co\/\S{12,14}', '', p)
-                recleaned = re.sub(r'[^(a-zA-Z0-9\s)]', '', cleaned)
-                tokenized = word_tokenize(recleaned)
-                stopped = [w for w in tokenized if not w in stop_words]
-                pos = nltk.pos_tag(stopped)
-                for w in pos:
-                        all_words.append(w[0].lower())
-        nlpStage1(new_dir, f1name, mainDF, all_words, documents, tweets, tokenized)
-
-def nlpStage1(new_dir, f1name, mainDF, all_words, documents, tweets, tokenized):
-        my_corpus=CategorizedPlaintextCorpusReader('./', r'.*', cat_pattern=r'(.*)_.*')
-        filtered = []
-        for w in all_words:
-                if w not in stop_words:
-                        filtered.append(w)
-                        #refiltered = re.sub(r'[^(a-zA-Z0-9\s)]', '', str(filtered))
-        #print(filtered)
-        nlpStage2(all_words, tweets, filtered, documents)
-
-def nlpStage112(tweets,):
-        all_words = nltk.FreqDist()
-        t2 = list(all_words.keys())[:5000]
-        words = set(documents)
-        features = {}
-        for t in t2:
-                features[t] = (t in t2)
-
-# Trying to expand on the bag of words to do analysis on grammar and mechanics before doing the generate function
-def nlpStage2(all_words, tweets, filtered, documents):
-        print("2")
-        featuresets = [(nlpStage112(tweets)) for (tweets) in documents]
-
-        random.shuffle(all_words)
-        print("3")
-        train_data = all_words[:500]
-        print(f"Train: {train_data}")
-        test_data = all_words[500:]
-        print("4")
-        classifer = NaiveBayesClassifier.train(train_data)
-        accu = classify.accuracy(classfier, test_data)
-        print("5")
-        print(f"Accuracy is: {accu}")
-        print(classifer.show_most_informative_features(10))
+#def preprocessing(mainDF):
+        #example = mainDF[mainDF['Times']]['Tweets'].values[0]
+        #if len(example) > 0:
+        #       print(example[0])
+        #       print('\nTweet:\t', example[1])
 
 
 user = sys.argv[1]  
