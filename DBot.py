@@ -12,13 +12,11 @@ import TKEYS as KEYS
 import pandas as pd
 import numpy as np
 import scipy as scy
-import scikit-learn as sklearn
-import pillow
+import sklearn
+#import pillow
 import h5py
 import tensorflow as tf
 import keras
-
-
 
 PYTHONIOENCODING="UTF-8"
 
@@ -26,7 +24,7 @@ def login():
         api = tw.Api(consumer_key = KEYS.CONSUMER_KEY, consumer_secret = KEYS.CONSUMER_SECRET, access_token_key = KEYS.ACCESS_TOKEN_KEY, access_token_secret = KEYS.ACCESS_TOKEN_SECRET, tweet_mode='extended')
         print("Connected to Twitter")
         collection(api)
-        
+
 def collection(api):
         results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
         print("Retrieving Tweets...")
@@ -34,12 +32,17 @@ def collection(api):
         mainDF = pd.DataFrame(columns=['Times', 'Tweets'])
         for tweet in results:
                 fText = tweet.full_text
-                fSplit = fText.split(' , ')
+                fSplit = str(fText.split(' , '))
                 tTime = tweet.created_at #Getting the UTC time
                 mTime = time.mktime(time.strptime(tTime, "%a %b %d %H:%M:%S %z %Y"))
                 eTime = int(mTime)
                 mainDF = mainDF.append({'Tweets': fSplit, 'Times': eTime}, ignore_index=True)
-        prepreprocessing(results, tweet, mainDF, eTime, fText, fSplit, api)
+        ### Testing Area ###
+
+
+        print(mainDF.Tweets.value_counts())
+        ### Testing Area ###
+        #prepreprocessing(results, tweet, mainDF, eTime, fText, fSplit, api)
 
 def prepreprocessing(results, tweet, mainDF, eTime, fText, fSplit, api):
         timeStdDev = np.std(mainDF['Times'].describe())
@@ -131,6 +134,7 @@ def nlpStage2(all_words, tweets, filtered, documents):
         print(f"Accuracy is: {accu}")
         print(classifer.show_most_informative_features(10))
 
+
 user = sys.argv[1]  
-stop_words=list(set(stopwords.words('english')))
-login() 
+#stop_words=list(set(stopwords.words('english')))
+login()
