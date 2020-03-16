@@ -35,7 +35,7 @@ def collection(api):
         results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
         print("Retrieving Tweets...")
         print("\n")
-        mainDF = pd.DataFrame(columns=['Times', 'Tweets'])
+        mainDF = pd.DataFrame(columns=['User', 'Times', 'Tweets'])
         directory = os.getcwd()
         if os.path.isdir('./corpus') == False:
                 os.makedirs('corpus')
@@ -48,10 +48,10 @@ def collection(api):
                 tTime = tweet.created_at #Getting the UTC time
                 mTime = time.mktime(time.strptime(tTime, "%a %b %d %H:%M:%S %z %Y"))
                 eTime = int(mTime)
-                #mainDF = mainDF.append({'Tweets': fSplit, 'Times': eTime}, ignore_index=True)
+                #mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime}, ignore_index=True)
         ### Testing Area ###
                 ld = lexical_diversity(str(tweet))
-                mainDF = mainDF.append({'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
+                mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
                 for index, r in mainDF.iterrows():
                         tweets=r['Tweets']
                         times=r['Times']
@@ -89,6 +89,7 @@ def collection(api):
         #       print('\nTweet:\t', example[1])
 
 
-user = sys.argv[1]  
+user = sys.argv[1]
+user = user.lower()  
 #stop_words=list(set(stopwords.words('english')))
-login()
+login() 
