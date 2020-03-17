@@ -69,9 +69,7 @@ def hopper1(api, directory, mainDF, userDF):
                 mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
                 userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
         main_df(directory, mainDF, fSplit, eTime, ld)
-        time.sleep(10)
         user_df(directory, userDF, fSplit, eTime, ld)
-        time.sleep(10)
         subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF)
 
 def hopper2(api, directory, userDF, mainDF):
@@ -86,9 +84,9 @@ def hopper2(api, directory, userDF, mainDF):
                 mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
                 userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
         main_df(directory, mainDF, fSplit, eTime, ld)
-        time.sleep(10)
+        main_ld(mainDF, directory)
         user_df(directory, userDF, fSplit, eTime, ld)
-        time.sleep(10)
+        user_ld(userDF, directory)
         subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF)
 
 
@@ -109,66 +107,72 @@ def collection(api, directory):
 
 
 def main_df(directory, mainDF, fSplit, eTime, ld):
-                os.chdir(os.path.join(directory, 'main_repo/'))
-                main_dir = os.getcwd()
-                for index, r in mainDF.iterrows():
-                        tweets=r['Tweets']
-                        times=r['Times']
-                        fname=str(user)+'_'+str(times)+'.txt'
-                        corpusfile=open(main_dir+'/'+fname, 'a')
-                        corpusfile.write(str(tweets))
-                        tokenized_tweets = sent_tokenize(str(tweets))
-                        corpusfile.close()
-                        f1name='main.txt'
-                        mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
-                        mainfile=open(main_dir+'/'+f1name, 'a')
-                        mainfile.write(str(tweets))
-                main_ld(mainfile, mainDF, directory)
+        os.chdir(os.path.join(directory, 'main_repo/'))
+        main_dir = os.getcwd()
+        for index, r in mainDF.iterrows():
+                tweets=r['Tweets']
+                times=r['Times']
+                fname=str(user)+'_'+str(times)+'.txt'
+                corpusfile=open(main_dir+'/'+fname, 'a')
+                corpusfile.write(str(tweets))
+                tokenized_tweets = sent_tokenize(str(tweets))
+                corpusfile.close()
+                f1name='main.txt'
+                mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True, sort=True)
+                mainfile=open(main_dir+'/'+f1name, 'a')
+                mainfile.write(str(tweets))
+                mainDF = mainDF.drop_duplicates()
+        mainDF = mainDF.drop_duplicates(subset=['Times'])
+        mainDF.to_csv(os.path.join(directory, 'main_repo', 'main.csv'))
 
-def main_ld(mainfile, mainDF, directory):
-                print('Stats for all tweets:\n\n')
-                ld2 = lexical_diversity(str(mainfile))
-                print(f'\nThe Lexical Diversity of all Tweets is:\t\t\t{ld2}')
-                ld3 = np.mean(mainDF['LD'].describe())
-                print(f'The Statistical Lexical Diversity of all Tweets is:\t{ld3}')
-                ld4 = np.std(mainDF['LD'].describe())
-                print(f'The StdDev of Lexical Diversity of all Tweets is:\t{ld4}')
-                timeStdDev = np.std(mainDF['Times'].describe())
-                print("\n\nTweets occur at this interval:\t\n")
-                postInterval = int(timeStdDev)
-                print(f"\t{postInterval} seconds apart.\n\n")
-                mainDF.to_csv(os.path.join(directory, 'main_repo', 'main.csv'))
+def main_ld(mainDF, directory):
+        mainDF = mainDF.drop_duplicates(subset=['Times'])
+        mainDF.to_csv(os.path.join(directory, 'main_repo', 'main.csv'))
+        print('Stats for all tweets:\n\n')
+        ld2 = lexical_diversity(mainDF['Tweets'])
+        print(f'\nThe Lexical Diversity of all Tweets is:\t\t\t\t{ld2}')
+        ld3 = np.mean(mainDF['LD'].describe())
+        print(f'The Statistical Mean Lexical Diversity of all Tweets is:\t{ld3}')
+        ld4 = np.std(mainDF['LD'].describe())
+        print(f'The StdDev of Lexical Diversity of all Tweets is:\t\t{ld4}')
+        timeStdDev = np.std(mainDF['Times'].describe())
+        print("\n\nTweets occur at this interval:\t\t\n")
+        postInterval = int(timeStdDev)
+        print(f"\t{postInterval} seconds apart.\n\n")
 
 def user_df(directory, userDF, fSplit, eTime, ld):
-                os.chdir(os.path.join(directory, user))
-                user_dir = os.getcwd()
-                for index, r in userDF.iterrows():
-                        tweets=r['Tweets']
-                        times=r['Times']
-                        fname=str(user)+'_'+str(times)+'.txt'
-                        corpusfile=open(user_dir+'/'+fname, 'a')
-                        corpusfile.write(str(tweets))
-                        tokenized_tweets = sent_tokenize(str(tweets))
-                        corpusfile.close()
-                        f1name=str(user)+'.txt'
-                        userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
-                        mainfile=open(user_dir+'/'+f1name, 'a')
-                        mainfile.write(str(tweets))
-                user_ld(mainfile, userDF, directory)
+        os.chdir(os.path.join(directory, user))
+        user_dir = os.getcwd()
+        for index, r in userDF.iterrows():
+                tweets=r['Tweets']
+                times=r['Times']
+                fname=str(user)+'_'+str(times)+'.txt'
+                corpusfile=open(user_dir+'/'+fname, 'a')
+                corpusfile.write(str(tweets))
+                tokenized_tweets = sent_tokenize(str(tweets))
+                corpusfile.close()
+                f1name=str(user)+'.txt'
+                userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True, sort=True)
+                mainfile=open(user_dir+'/'+f1name, 'a')
+                mainfile.write(str(tweets))
+                userDF = userDF.drop_duplicates()
+        userDF = userDF.drop_duplicates(subset=['Times'])
+        userDF.to_csv(os.path.join(directory, user, user+'.csv'))
 
-def user_ld(mainfile, userDF, directory):
-                print(f"Stats for {user}'s tweets:\n\n")
-                ld2 = lexical_diversity(str(mainfile))
-                print(f'\nThe Lexical Diversity of all Tweets is:\t\t\t{ld2}')
-                ld3 = np.mean(userDF['LD'].describe())
-                print(f'The Statistical Lexical Diversity of all Tweets is:\t{ld3}')
-                ld4 = np.std(userDF['LD'].describe())
-                print(f'The StdDev of Lexical Diversity of all Tweets is:\t{ld4}')
-                timeStdDev = np.std(userDF['Times'].describe())
-                print("\n\nTweets occur at this interval:\t\n")
-                postInterval = int(timeStdDev)
-                print(f"\t{postInterval} seconds apart.\n\n")
-                userDF.to_csv(os.path.join(directory, user, user+'.csv'))
+def user_ld(userDF, directory):
+        userDF = userDF.drop_duplicates()
+        userDF.to_csv(os.path.join(directory, user, user+'.csv'))
+        print(f"Stats for {user}'s tweets:\n\n")
+        ld2 = lexical_diversity(userDF['Tweets'])
+        print(f"\nThe Lexical Diversity of {user}'s Tweets is:\t\t\t{ld2}")
+        ld3 = np.mean(userDF['LD'].describe())
+        print(f"The Statistical Mean Lexical Diversity of {user}'s Tweets is:\t{ld3}")
+        ld4 = np.std(userDF['LD'].describe())
+        print(f"The StdDev of Lexical Diversity of {user}'s Tweets is:\t\t{ld4}")
+        timeStdDev = np.std(userDF['Times'].describe())
+        print(f"\n\n{user}'s Tweets occur at this interval:\t\n")
+        postInterval = int(timeStdDev)
+        print(f"\t{postInterval} seconds apart.\n\n")
 
 def subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF):
         results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
@@ -176,10 +180,10 @@ def subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF):
         shutil.move(os.path.join(directory, 'main_repo', 'main.csv'), os.path.join(directory, 'main.csv'))
         shutil.move(os.path.join(directory, user, user+'.csv'), os.path.join(directory, user+'.csv'))
         os.chdir(directory)
-        userDF = pd.read_csv(user+'.csv')
-        mainDF = pd.read_csv('main.csv')
         print("Retrieving Tweets...")
         print("\n")
+        userDF = pd.read_csv(user+'.csv')
+        mainDF = pd.read_csv('main.csv')
         for tweet in results:
                 tweets=mainDF['Tweets']
                 times=mainDF['Times']
@@ -189,25 +193,31 @@ def subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF):
                 mTime = time.mktime(time.strptime(tTime, "%a %b %d %H:%M:%S %z %Y"))
                 eTime = int(mTime)
                 ld = lexical_diversity(str(tweet))
-                mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
-                mainDF = mainDF.drop_duplicates(keep='first')
-                main_df(directory, mainDF, fSplit, eTime, ld)
-                userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
-                userDF = userDF.drop_duplicates(keep='first')
-                user_df(directory, userDF, fSplit, eTime, ld)
+                mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True, sort=True)
+                #main_df(directory, mainDF, fSplit, eTime, ld)
+                userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True, sort=True)
+                #user_df(directory, userDF, fSplit, eTime, ld)
+                mainDF1 = mainDF.drop_duplicates(subset=['Times'])
+                userDF1 = userDF.drop_duplicates(subset=['Times'])
                 mainfile=open(os.path.join(directory, 'main_repo', 'main.txt'), 'a')
                 mainfile.write(str(tweets))
-        print('Updated Stats for all tweets:\n\n')
-        ld2 = lexical_diversity(str(mainfile))
-        print(f'\nThe Lexical Diversity of all Tweets is:\t\t\t{ld2}')
+        mainDF = mainDF1.drop_duplicates(subset=['Times'])
+        userDF = userDF1.drop_duplicates(subset=['Times'])
+        main_ld(mainDF, directory)
+        user_ld(mainDF, directory)
+        print('\n\nUpdated Stats for all tweets:\n\n')
+        ld2 = lexical_diversity(mainDF['Tweets'].describe())
+        print(f'\nThe Lexical Diversity of all Tweets is:\t\t\t\t\t{ld2}')
         ld3 = np.mean(mainDF['LD'].describe())
-        print(f'The Updated Statistical Lexical Diversity of all Tweets is:\t{ld3}')
+        print(f'The Updated Statistical Lexical Diversity of all Tweets is:\t\t{ld3}')
         ld4 = np.std(mainDF['LD'].describe())
-        print(f'The Updated StdDev of Lexical Diversity of all Tweets is:\t{ld4}')
+        print(f'The Updated StdDev of Lexical Diversity of all Tweets is:\t\t{ld4}')
         timeStdDev = np.std(mainDF['Times'].describe())
         print("\n\nTweets occur at this Updated interval:\t\n")
         postInterval = int(timeStdDev)
         print(f"\t{postInterval} seconds apart.\n\n")
+        mainDF = mainDF.drop_duplicates()
+        userDF = userDF.drop_duplicates()
         userDF.to_csv('user.csv')
         mainDF.to_csv('main.csv')
         shutil.move(os.path.join(directory, 'main.csv'), os.path.join(directory, 'main_repo', 'main.csv'))
@@ -219,8 +229,8 @@ def gonogo(api, directory, fSplit, eTime, ld, mainDF, userDF):
         gonogo = input("Continue? (Y/N)")
         if gonogo.lower() == 'y':
                 print("Sleeping for 4 hours")
-                time.sleep(14400)
-                subsequent()
+                time.sleep(4)
+                subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF)
         else:
                 print("Goodbye")
                 exit()
