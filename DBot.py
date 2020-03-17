@@ -40,8 +40,11 @@ def login():
 def first_run(api, directory):
         if os.path.isdir('./files') == False:
                 os.makedirs('files')
-                os.makedirs(directory+'/'+user)
-                os.makedirs(directory+'/main_repo')
+                os.chdir('./files')
+                os.makedirs(user)
+                os.chdir(directory)
+                os.makedirs('main_repo')
+                print("Finsihed 1st run")
                 collection(api, directory)
         else:
                 collection(api, directory)
@@ -84,8 +87,6 @@ def collection(api, directory):
         if path.exists(directory+'/'+user+'/'+user+'.csv') == False:
                 os.chdir(directory+'/'+user+'/')
                 new_dir = os.getcwd()
-                os.makedirs(new_dir+'/main_repo')
-                os.makedirs(new_dir+'/'+user)
                 print("Retrieving Tweets...")
                 print("\n")
                 print(f'Current Directory:\t {new_dir}\n\n')
@@ -95,14 +96,13 @@ def collection(api, directory):
         else:
                 mainDF = pd.DataFrame(columns=['User', 'Times', 'Tweets', 'LD'])
                 userDF = pd.DataFrame(columns=['User', 'Times', 'Tweets', 'LD'])
-                os.chdir(directory + '/main_repo/')
-                mainDF = pd.read_csv('mainDF.csv')
-                os.chdir(directory + '/'+user+'/')
-                userDF = pd.read_csv(user+'.csv')
+                mainDF = pd.read_csv(os.path.join(directory, 'main_repo', 'main.csv'))
+                userDF = pd.read_csv(os.path.join(directory, user, user+'.csv'))
                 hopper2(api, directory, userDF, mainDF)
 
+
 def main_df(directory, mainDF, fSplit, eTime, ld):
-                os.chdir(directory + '/main_repo/')
+                os.chdir(os.path.join(directory, 'main_repo/'))
                 main_dir = os.getcwd()
                 for index, r in mainDF.iterrows():
                         tweets=r['Tweets']
@@ -113,6 +113,7 @@ def main_df(directory, mainDF, fSplit, eTime, ld):
                         tokenized_tweets = sent_tokenize(str(tweets))
                         corpusfile.close()
                         f1name='main.txt'
+                        mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
                         mainfile=open(main_dir+'/'+f1name, 'a')
                         mainfile.write(str(tweets))
                         timeStdDev = np.std(mainDF['Times'].describe())
@@ -127,11 +128,10 @@ def main_df(directory, mainDF, fSplit, eTime, ld):
                 print("\n\nTweets occur at this interval:\t\n")
                 postInterval = int(timeStdDev)
                 print(f"\t{postInterval} seconds apart.\n\n")
-                os.chdir(directory + '/main_repo')
-                mainDF.to_csv('mainDF.csv')
+                mainDF.to_csv(os.path.join(directory, 'main_repo', 'main.csv'))
 
 def user_df(directory, userDF, fSplit, eTime, ld):
-                os.chdir(directory + '/'+user+'/')
+                os.chdir(os.path.join(directory, user))
                 user_dir = os.getcwd()
                 for index, r in userDF.iterrows():
                         tweets=r['Tweets']
@@ -142,6 +142,7 @@ def user_df(directory, userDF, fSplit, eTime, ld):
                         tokenized_tweets = sent_tokenize(str(tweets))
                         corpusfile.close()
                         f1name=str(user)+'.txt'
+                        userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
                         mainfile=open(user_dir+'/'+f1name, 'a')
                         mainfile.write(str(tweets))
                         timeStdDev = np.std(userDF['Times'].describe())
@@ -156,21 +157,15 @@ def user_df(directory, userDF, fSplit, eTime, ld):
                 print("\n\nTweets occur at this interval:\t\n")
                 postInterval = int(timeStdDev)
                 print(f"\t{postInterval} seconds apart.\n\n")
-                os.chdir(directory+'/'+user)
-                userDF.to_csv(user+'.csv')
-        
+                userDF.to_csv(os.path.join(directory, user, user+'.csv'))
+
 def subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF):
         results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
         os.chdir(directory)
-        os.chdir(directory+'/main_repo/')
-        mpath = os.path.join(directory, '/main_repo')
-        shutil.move(os.path.join(directory, '/main_repo', mpath)
-        os.chdir(directory+'/'+user)
+        shutil.move(os.path.join(directory, 'main_repo', 'main.csv'), os.path.join(directory, 'main.csv'))
+        shutil.move(os.path.join(directory, user, user+'.csv'), os.path.join(directory, user+'.csv'))
         os.chdir(directory)
-        ufile = user+'.csv'
-        udest = shutil.move(ufile, '../'+user+'.csv')
-        os.chdir(directory)
-        userDF = pd.read_csv('user.csv')
+        userDF = pd.read_csv(user+'.csv')
         mainDF = pd.read_csv('main.csv')
         print("Retrieving Tweets...")
         print("\n")
@@ -189,7 +184,7 @@ def subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF):
                 userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
                 userDF = userDF.drop_duplicates(keep='first')
                 user_df(directory, userDF, fSplit, eTime, ld)
-                mainfile=open(directory + '/files/main_repo/main.txt', 'a')
+                mainfile=open(os.path.join(directory, 'main_repo', 'main.txt'), 'a')
                 mainfile.write(str(tweets))
         print('Updated Stats for all tweets:\n\n')
         ld2 = lexical_diversity(str(mainfile))
@@ -204,10 +199,9 @@ def subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF):
         print(f"\t{postInterval} seconds apart.\n\n")
         userDF.to_csv('user.csv')
         mainDF.to_csv('main.csv')
-        mpath = directory+'main_repo/main.csv'
-        upath= directory+'/'+user+'/'+user+'.csv'
-        shutil.move('main.csv', './files/main_repo/main.csv')
-        shutil.move(user+'.csv', './files/main_repo/'+user+'.csv')
+        shutil.move(os.path.join(directory, 'main.csv'), os.path.join(directory, 'main_repo', 'main.csv'))
+        shutil.move(os.path.join(directory, user+'.csv'), os.path.join(directory, user, user+'.csv'))
+        os.chdir(directory)
         gonogo(api, directory, fSplit, eTime, ld, mainDF, userDF)
 
 def gonogo(api, directory, fSplit, eTime, ld, mainDF, userDF):
@@ -222,5 +216,4 @@ def gonogo(api, directory, fSplit, eTime, ld, mainDF, userDF):
 
 user = sys.argv[1]
 user = user.lower()  
-#stop_words=list(set(stopwords.words('english')))
 login()
