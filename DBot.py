@@ -2,9 +2,12 @@
 
 #Housekeeping imports
 import os
+import os.path
+from os import path
 import sys
 import time
 from datetime import datetime
+import shutil
 #Module specific imports
 import twitter as tw
 import TKEYS as KEYS
@@ -13,10 +16,11 @@ import pandas as pd
 import numpy as np
 import scipy as scy
 import sklearn
-#import pillow
 import h5py
 import tensorflow as tf
 import keras
+import collections
+from tensorflow.keras import layers
 #NLP Imports
 import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize
@@ -26,70 +30,197 @@ PYTHONIOENCODING="UTF-8"
 def login():
         api = tw.Api(consumer_key = KEYS.CONSUMER_KEY, consumer_secret = KEYS.CONSUMER_SECRET, access_token_key = KEYS.ACCESS_TOKEN_KEY, access_token_secret = KEYS.ACCESS_TOKEN_SECRET, tweet_mode='extended')
         print("Connected to Twitter")
-        collection(api)
+        directory = os.getcwd()
+        directory = directory+'/files'
+        if os.path.isdir('./files') == False:
+                first_run(api, directory)
+        else:
+                collection(api, directory)
+
+def first_run(api, directory):
+        if os.path.isdir('./files') == False:
+                os.makedirs('files')
+                os.makedirs(directory+'/'+user)
+                os.makedirs(directory+'/main_repo')
+                collection(api, directory)
+        else:
+                collection(api, directory)
 
 def lexical_diversity(text):
         return len(set(text)) / len(text)
 
-def collection(api):
+def hopper1(api, directory, mainDF, userDF):
         results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
-        print("Retrieving Tweets...")
-        print("\n")
-        mainDF = pd.DataFrame(columns=['User', 'Times', 'Tweets'])
-        directory = os.getcwd()
-        if os.path.isdir('./corpus') == False:
-                os.makedirs('corpus')
-        os.chdir(directory + '/corpus')
-        new_dir = os.getcwd()
-        print(f'Current Directory:\t {new_dir}\n\n')
         for tweet in results:
                 fText = tweet.full_text
                 fSplit = str(fText.split(' , '))
                 tTime = tweet.created_at #Getting the UTC time
                 mTime = time.mktime(time.strptime(tTime, "%a %b %d %H:%M:%S %z %Y"))
                 eTime = int(mTime)
-                #mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime}, ignore_index=True)
-        ### Testing Area ###
                 ld = lexical_diversity(str(tweet))
                 mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
+                userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
+                main_df(directory, mainDF, fSplit, eTime, ld)
+                user_df(directory, userDF, fSplit, eTime, ld)
+                subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF)
+
+def hopper2(api, directory, userDF, mainDF):
+        results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
+        for tweet in results:
+                fText = tweet.full_text
+                fSplit = str(fText.split(' , '))
+                tTime = tweet.created_at #Getting the UTC time
+                mTime = time.mktime(time.strptime(tTime, "%a %b %d %H:%M:%S %z %Y"))
+                eTime = int(mTime)
+                ld = lexical_diversity(str(tweet))
+                mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
+                userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
+                main_df(directory, mainDF, fSplit, eTime, ld)
+                user_df(directory, userDF, fSplit, eTime, ld)
+                subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF)
+
+
+def collection(api, directory):
+        if path.exists(directory+'/'+user+'/'+user+'.csv') == False:
+                os.chdir(directory+'/'+user+'/')
+                new_dir = os.getcwd()
+                os.makedirs(new_dir+'/main_repo')
+                os.makedirs(new_dir+'/'+user)
+                print("Retrieving Tweets...")
+                print("\n")
+                print(f'Current Directory:\t {new_dir}\n\n')
+                mainDF = pd.DataFrame(columns=['User', 'Times', 'Tweets', 'LD'])
+                userDF = pd.DataFrame(columns=['User', 'Times', 'Tweets', 'LD'])
+                hopper1(api, directory, mainDF, userDF)
+        else:
+                mainDF = pd.DataFrame(columns=['User', 'Times', 'Tweets', 'LD'])
+                userDF = pd.DataFrame(columns=['User', 'Times', 'Tweets', 'LD'])
+                os.chdir(directory + '/main_repo/')
+                mainDF = pd.read_csv('mainDF.csv')
+                os.chdir(directory + '/'+user+'/')
+                userDF = pd.read_csv(user+'.csv')
+                hopper2(api, directory, userDF, mainDF)
+
+def main_df(directory, mainDF, fSplit, eTime, ld):
+                os.chdir(directory + '/main_repo/')
+                main_dir = os.getcwd()
                 for index, r in mainDF.iterrows():
                         tweets=r['Tweets']
                         times=r['Times']
                         fname=str(user)+'_'+str(times)+'.txt'
-                        corpusfile=open(new_dir+'/'+fname, 'a')
+                        corpusfile=open(main_dir+'/'+fname, 'a')
                         corpusfile.write(str(tweets))
-                        #print(f"The lexical diversity of this tweet: {times} is {ld}")
                         tokenized_tweets = sent_tokenize(str(tweets))
-                        #print(tokenized_tweets)
+                        corpusfile.close()
+                        f1name='main.txt'
+                        mainfile=open(main_dir+'/'+f1name, 'a')
+                        mainfile.write(str(tweets))
+                        timeStdDev = np.std(mainDF['Times'].describe())
+                print('Stats for all tweets:\n\n')
+                ld2 = lexical_diversity(str(mainfile))
+                print(f'\nThe Lexical Diversity of all Tweets is:\t\t\t{ld2}')
+                ld3 = np.mean(mainDF['LD'].describe())
+                print(f'The Statistical Lexical Diversity of all Tweets is:\t{ld3}')
+                ld4 = np.std(mainDF['LD'].describe())
+                print(f'The StdDev of Lexical Diversity of all Tweets is:\t{ld4}')
+                timeStdDev = np.std(mainDF['Times'].describe())
+                print("\n\nTweets occur at this interval:\t\n")
+                postInterval = int(timeStdDev)
+                print(f"\t{postInterval} seconds apart.\n\n")
+                os.chdir(directory + '/main_repo')
+                mainDF.to_csv('mainDF.csv')
+
+def user_df(directory, userDF, fSplit, eTime, ld):
+                os.chdir(directory + '/'+user+'/')
+                user_dir = os.getcwd()
+                for index, r in userDF.iterrows():
+                        tweets=r['Tweets']
+                        times=r['Times']
+                        fname=str(user)+'_'+str(times)+'.txt'
+                        corpusfile=open(user_dir+'/'+fname, 'a')
+                        corpusfile.write(str(tweets))
+                        tokenized_tweets = sent_tokenize(str(tweets))
                         corpusfile.close()
                         f1name=str(user)+'.txt'
-                        mainfile=open(new_dir+'/'+f1name, 'a')
+                        mainfile=open(user_dir+'/'+f1name, 'a')
+                        mainfile.write(str(tweets))
+                        timeStdDev = np.std(userDF['Times'].describe())
+                print(f"Stats for {user}'s tweets:\n\n")
+                ld2 = lexical_diversity(str(mainfile))
+                print(f'\nThe Lexical Diversity of all Tweets is:\t\t\t{ld2}')
+                ld3 = np.mean(userDF['LD'].describe())
+                print(f'The Statistical Lexical Diversity of all Tweets is:\t{ld3}')
+                ld4 = np.std(userDF['LD'].describe())
+                print(f'The StdDev of Lexical Diversity of all Tweets is:\t{ld4}')
+                timeStdDev = np.std(userDF['Times'].describe())
+                print("\n\nTweets occur at this interval:\t\n")
+                postInterval = int(timeStdDev)
+                print(f"\t{postInterval} seconds apart.\n\n")
+                os.chdir(directory+'/'+user)
+                userDF.to_csv(user+'.csv')
+        
+def subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF):
+        results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
+        os.chdir(directory)
+        os.chdir(directory+'/main_repo/')
+        mpath = os.path.join(directory, '/main_repo')
+        shutil.move(os.path.join(directory, '/main_repo', mpath)
+        os.chdir(directory+'/'+user)
+        os.chdir(directory)
+        ufile = user+'.csv'
+        udest = shutil.move(ufile, '../'+user+'.csv')
+        os.chdir(directory)
+        userDF = pd.read_csv('user.csv')
+        mainDF = pd.read_csv('main.csv')
+        print("Retrieving Tweets...")
+        print("\n")
+        for tweet in results:
+                tweets=mainDF['Tweets']
+                times=mainDF['Times']
+                fText = tweet.full_text
+                fSplit = str(fText.split(' , '))
+                tTime = tweet.created_at #Getting the UTC time
+                mTime = time.mktime(time.strptime(tTime, "%a %b %d %H:%M:%S %z %Y"))
+                eTime = int(mTime)
+                ld = lexical_diversity(str(tweet))
+                mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
+                mainDF = mainDF.drop_duplicates(keep='first')
+                main_df(directory, mainDF, fSplit, eTime, ld)
+                userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
+                userDF = userDF.drop_duplicates(keep='first')
+                user_df(directory, userDF, fSplit, eTime, ld)
+                mainfile=open(directory + '/files/main_repo/main.txt', 'a')
                 mainfile.write(str(tweets))
-        print(mainDF)
+        print('Updated Stats for all tweets:\n\n')
         ld2 = lexical_diversity(str(mainfile))
         print(f'\nThe Lexical Diversity of all Tweets is:\t\t\t{ld2}')
         ld3 = np.mean(mainDF['LD'].describe())
-        print(f'The Statistical Lexical Diversity of all Tweets is:\t{ld3}')
+        print(f'The Updated Statistical Lexical Diversity of all Tweets is:\t{ld3}')
         ld4 = np.std(mainDF['LD'].describe())
-        print(f'The StdDev of Lexical Diversity of all Tweets is:\t{ld4}')
+        print(f'The Updated StdDev of Lexical Diversity of all Tweets is:\t{ld4}')
         timeStdDev = np.std(mainDF['Times'].describe())
-        print("\n\nTweets occur at this interval:\t\n")
+        print("\n\nTweets occur at this Updated interval:\t\n")
         postInterval = int(timeStdDev)
         print(f"\t{postInterval} seconds apart.\n\n")
-        if os.path.isdir('./corpus') == False:
-                os.makedirs('corpus')
-                #preprocessing(mainDF)
-        #else:
-                #preprocessing(mainDF)
+        userDF.to_csv('user.csv')
+        mainDF.to_csv('main.csv')
+        mpath = directory+'main_repo/main.csv'
+        upath= directory+'/'+user+'/'+user+'.csv'
+        shutil.move('main.csv', './files/main_repo/main.csv')
+        shutil.move(user+'.csv', './files/main_repo/'+user+'.csv')
+        gonogo(api, directory, fSplit, eTime, ld, mainDF, userDF)
 
-#def preprocessing(mainDF):
-        #example = mainDF[mainDF['Times']]['Tweets'].values[0]
-        #if len(example) > 0:
-        #       print(example[0])
-        #       print('\nTweet:\t', example[1])
-
+def gonogo(api, directory, fSplit, eTime, ld, mainDF, userDF):
+        gonogo = input("Continue? (Y/N)")
+        if gonogo.lower() == 'y':
+                print("Sleeping for 4 hours")
+                time.sleep(14400)
+                subsequent()
+        else:
+                print("Goodbye")
+                exit()
 
 user = sys.argv[1]
 user = user.lower()  
 #stop_words=list(set(stopwords.words('english')))
-login() 
+login()
