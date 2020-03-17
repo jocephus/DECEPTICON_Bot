@@ -2,8 +2,10 @@ twitter
 pandas
 numpy
 scipy
-scikit-learn
+sklearn
 pillow
 h5py
 tensorflow
 keras
+collections
+nltk
