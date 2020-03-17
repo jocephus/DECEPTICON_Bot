@@ -25,6 +25,12 @@ from tensorflow.keras import layers
 import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize
 
+#
+#
+# Thanks to Goldar, Dreadjak, Bill, thatguy, nosirrahSec, & jferg for the help.
+#
+#
+
 PYTHONIOENCODING="UTF-8"
 
 def login():
@@ -44,7 +50,6 @@ def first_run(api, directory):
                 os.makedirs(user)
                 os.chdir(directory)
                 os.makedirs('main_repo')
-                print("Finsihed 1st run")
                 collection(api, directory)
         else:
                 collection(api, directory)
@@ -63,9 +68,11 @@ def hopper1(api, directory, mainDF, userDF):
                 ld = lexical_diversity(str(tweet))
                 mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
                 userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
-                main_df(directory, mainDF, fSplit, eTime, ld)
-                user_df(directory, userDF, fSplit, eTime, ld)
-                subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF)
+        main_df(directory, mainDF, fSplit, eTime, ld)
+        time.sleep(10)
+        user_df(directory, userDF, fSplit, eTime, ld)
+        time.sleep(10)
+        subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF)
 
 def hopper2(api, directory, userDF, mainDF):
         results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
@@ -78,9 +85,11 @@ def hopper2(api, directory, userDF, mainDF):
                 ld = lexical_diversity(str(tweet))
                 mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
                 userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
-                main_df(directory, mainDF, fSplit, eTime, ld)
-                user_df(directory, userDF, fSplit, eTime, ld)
-                subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF)
+        main_df(directory, mainDF, fSplit, eTime, ld)
+        time.sleep(10)
+        user_df(directory, userDF, fSplit, eTime, ld)
+        time.sleep(10)
+        subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF)
 
 
 def collection(api, directory):
@@ -94,8 +103,6 @@ def collection(api, directory):
                 userDF = pd.DataFrame(columns=['User', 'Times', 'Tweets', 'LD'])
                 hopper1(api, directory, mainDF, userDF)
         else:
-                mainDF = pd.DataFrame(columns=['User', 'Times', 'Tweets', 'LD'])
-                userDF = pd.DataFrame(columns=['User', 'Times', 'Tweets', 'LD'])
                 mainDF = pd.read_csv(os.path.join(directory, 'main_repo', 'main.csv'))
                 userDF = pd.read_csv(os.path.join(directory, user, user+'.csv'))
                 hopper2(api, directory, userDF, mainDF)
@@ -116,7 +123,9 @@ def main_df(directory, mainDF, fSplit, eTime, ld):
                         mainDF = mainDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
                         mainfile=open(main_dir+'/'+f1name, 'a')
                         mainfile.write(str(tweets))
-                        timeStdDev = np.std(mainDF['Times'].describe())
+                main_ld(mainfile, mainDF, directory)
+
+def main_ld(mainfile, mainDF, directory):
                 print('Stats for all tweets:\n\n')
                 ld2 = lexical_diversity(str(mainfile))
                 print(f'\nThe Lexical Diversity of all Tweets is:\t\t\t{ld2}')
@@ -145,7 +154,9 @@ def user_df(directory, userDF, fSplit, eTime, ld):
                         userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
                         mainfile=open(user_dir+'/'+f1name, 'a')
                         mainfile.write(str(tweets))
-                        timeStdDev = np.std(userDF['Times'].describe())
+                user_ld(mainfile, userDF, directory)
+
+def user_ld(mainfile, userDF, directory):
                 print(f"Stats for {user}'s tweets:\n\n")
                 ld2 = lexical_diversity(str(mainfile))
                 print(f'\nThe Lexical Diversity of all Tweets is:\t\t\t{ld2}')
@@ -216,4 +227,4 @@ def gonogo(api, directory, fSplit, eTime, ld, mainDF, userDF):
 
 user = sys.argv[1]
 user = user.lower()  
-login()
+login() 
