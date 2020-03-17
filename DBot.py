@@ -21,6 +21,9 @@ import tensorflow as tf
 import keras
 import collections
 from tensorflow.keras import layers
+from keras.models import Sequential
+from keras.layers import Dense, LSTM, Dropout, Bidirectional, Embedding
+from keras.callbacks import ModelCheckpoint
 #NLP Imports
 import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize
@@ -224,16 +227,21 @@ def subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF):
         shutil.move(os.path.join(directory, user+'.csv'), os.path.join(directory, user, user+'.csv'))
         os.chdir(directory)
         gonogo(api, directory, fSplit, eTime, ld, mainDF, userDF)
+        #repeater(api, directory, fSplit, eTime, ld, mainDF, userDF)
 
 def gonogo(api, directory, fSplit, eTime, ld, mainDF, userDF):
         gonogo = input("Continue? (Y/N)")
         if gonogo.lower() == 'y':
                 print("Sleeping for 4 hours")
-                time.sleep(4)
+                time.sleep(60)
                 subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF)
         else:
                 print("Goodbye")
                 exit()
+
+def repeater(api, directory, fSplit, eTime, ld, mainDF, userDF, postInterval):
+        time.sleep(postInterval-480)
+        subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF)
 
 user = sys.argv[1]
 user = user.lower()  
