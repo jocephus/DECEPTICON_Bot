@@ -8,3 +8,4 @@ tensorflow
 keras
 nltk
 collections
+spacy
