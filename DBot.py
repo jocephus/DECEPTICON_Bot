@@ -29,7 +29,7 @@ from keras.callbacks import ModelCheckpoint
 import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.corpus import stopwords
-from spacy.lang.en import English
+
 #
 #
 # Thanks to Goldar, Dreadjak, Bill, thatguy, nosirrahSec, & jferg for the help.
@@ -249,30 +249,40 @@ def repeater(api, directory, fSplit, eTime, ld, mainDF, userDF, postInterval):
         subsequent(api, directory, fSplit, eTime, ld, mainDF, userDF)
 
 def user_languagePreprocessing(directory):
-        shutil.move(os.path.join(directory, 'main_repo', 'main.csv'), os.path.join(directory, 'main.csv'))
         shutil.move(os.path.join(directory, user, user+'.csv'), os.path.join(directory, user+'.csv'))
+        main_bank = []
+        user_bank = []
         os.chdir(directory)
         print("Retrieving Tweets...")
         print("\n")
         userDF = pd.read_csv(user+'.csv')
-        mainDF = pd.read_csv('main.csv')
+
         for index, r in userDF.iterrows():
                 tweets=r['Tweets']
-                tokenized_tweets = sent_tokenize(str(tweets))
-                for tweet in tokenized_tweets:
-                        if tweet not in stop_words:
-                                user_bank.append(tweet)
-        print(user_bank)
+                tokenized_tweets = word_tokenize(str(tweets))
+                for w in tokenized_tweets:
+                        if w not in stop_words:
+                                user_bank.append(w)
+        print(" ".join(user_bank))
+        print('\n\n\n')
+        time.sleep(10)
+        shutil.move(os.path.join(directory, 'main_repo', 'main.csv'), os.path.join(directory, 'main.csv'))
+        mainDF = pd.read_csv('main.csv')
         for index, r in mainDF.iterrows():
                 tweets=r['Tweets']
-                tokenized_tweets = sent_tokenize(str(tweets))
-                for tweet in tokenized_tweets:
-                        if tweet not in stop_words:
-                                main_bank.append(tweet)
-        print(main_bank)
+                tokenized_tweets = word_tokenize(str(tweets))
+                for t in tokenized_tweets:
+                        if t not in stop_words:
+                                main_bank.append(t)
+        shutil.move(os.path.join(directory, 'main.csv'), os.path.join(directory, 'main_repo', 'main.csv'))
+        shutil.move(os.path.join(directory, user+'.csv'), os.path.join(directory, user, user+'.csv'))
+        os.chdir(directory)
+        print(" ".join(main_bank))
+
+
 
 
 user = sys.argv[1]
 user = user.lower()
-stop_words = set(stopwords.words('english'))  
+stop_words = set(stopwords.words('english'))
 login() 
