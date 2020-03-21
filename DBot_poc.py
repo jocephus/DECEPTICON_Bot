@@ -33,6 +33,8 @@ from nltk.stem import WordNetLemmatizer
 from textblob import Word
 #Bag of Words Support
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import HashingVectorizer
 #
 #
 # Thanks to Goldar, Dreadjak, Bill, thatguy, nosirrahSec, & jferg for the help.
@@ -47,7 +49,7 @@ def login():
         print("Retrieving Tweets...\n")
         os.chdir(directory)
         if path.exists(directory+'/files.csv') == False:
-                userDF = pd.DataFrame(columns=['Times', 'Tweets', 'LD'])
+                userDF = pd.DataFrame(columns=['User', 'Tweets', 'Times', 'LD', 'Stemmed', 'Lemmerized'])
                 hopper(api, userDF)
         else:
                 userDF = pd.read_csv(os.path.join(directory, 'files.csv'))
@@ -84,7 +86,6 @@ def hopper(api, userDF):
                 userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld, 'Stemmed': rootWord, 'Lemmerized': lemm}, ignore_index=True, sort=True)
                 userDF = userDF.drop_duplicates(subset=['Times'])
         userDF = userDF.drop_duplicates(subset=['Times'])
-        print(os.getcwd())
         userDF.to_csv('files.csv')
         for index, r in userDF.iterrows():
                 tweets=r['Tweets']
@@ -131,62 +132,52 @@ def repeater(api, fSplit, eTime, ld, userDF, postInterval):
 def bagOWords1(api, fSplit, eTime, ld, userDF):
         print("Beginning NLP Analysis...")
         print('\n\nOnto the fun stuff...\n\n')
-        print(os.getcwd())
         userDF = pd.read_csv('files.csv')
-        print('\n\n\t\tStarting with the Original Tweets...\n\n')
         for index, r in userDF.iterrows():
-                tweets=r['Tweets']
-                #print('Printing data for Original Tweets')
-                tweets = [str(tweets)]
-                vectorizer.fit(tweets)
-        print(vectorizer.vocabulary_)
-        vector = vectorizer.transform(tweets)
+                lemmerized=r['Lemmerized']
+                lemmerized = [str(lemmerized)]
+                cVectorizer.fit(lemmerized)
+        print(cVectorizer.vocabulary_)
+        vector = cVectorizer.transform(lemmerized)
         print(vector.shape)
         print(type(vector))
         print(vector.toarray())
         bagOWords2(api, fSplit, eTime, ld, userDF)
 
 def bagOWords2(api, fSplit, eTime, ld, userDF):
+        print('\n\n\t\tStage 2 NLP Analysis...\n\n')
+        userDF = pd.read_csv('files.csv')
         for index, r in userDF.iterrows():
                 lemmerized=r['Lemmerized']
-                #print('Printing data for Lemmerized Tweets')
                 lemmerized = [str(lemmerized)]
-                vectorizer.fit(lemmerized)
-        print(vectorizer.vocabulary_)
-        vector = vectorizer.transform(lemmerized)
+                tVectorizer.fit(lemmerized)
+        print(tVectorizer.vocabulary_)
+        print(tVectorizer.idf_)
+        vector = tVectorizer.transform(lemmerized)
+        print(vector.shape)
+        print(type(vector))
+        print(vector.toarray())
+        bagOWords3(api, fSplit, eTime, ld, userDF)
+
+def bagOWords3(api, fSplit, eTime, ld, userDF):
+        print('\n\n\t\tStage 3 NLP Analysis...\n\n')
+        print('t\tLemmerized NLP Analysis...\n\n')
+        userDF = pd.read_csv('files.csv')
+        for index, r in userDF.iterrows():
+                lemmerized=r['Lemmerized']
+                lemmerized = [str(lemmerized)]
+                tVectorizer.fit(lemmerized)
+        vector = hVectorizer.transform(lemmerized)
         print(vector.shape)
         print(type(vector))
         print(vector.toarray())
         gonogo(api, fSplit, eTime, ld, userDF)
 
-
-
-def subsequent(api, ffSplit, eTime, ld, userDF):
+def subsequent(api, fSplit, eTime, ld, userDF):
         results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
         print("Retrieving Tweets...")
         print("\n")
-        userDF = pd.read_csv('files.csv')
-        for tweet in results:
-                fText = tweet.full_text
-                fSplit = str(fText.split(' , '))
-                tTime = tweet.created_at #Getting the UTC time
-                mTime = time.mktime(time.strptime(tTime, "%a %b %d %H:%M:%S %z %Y"))
-                eTime = int(mTime)
-                ld = lexical_diversity(str(tweet))
-                tokenized_tweets = sent_tokenize(fSplit)
-                for w in tokenized_tweets:
-                        if w not in stop_words1:
-                                bank.append(w)
-                for w in bank:
-                        rootWord=ps.stem(w)
-                        stem.append(rootWord)
-                for i in bank:
-                        word1 = Word(i).lemmatize("n")
-                        word2 = Word(word1).lemmatize("v")
-                        word3 = Word(word2).lemmatize("a")
-                        lemm.append(Word(word3).lemmatize())
-                userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld, 'Stemmed': rootWord, 'Lemmerized': lemm}, ignore_index=True, sort=True)
-                userDF = userDF.drop_duplicates(subset=['Times'])
+        hopper(api, userDF)
         userDF = userDF1.drop_duplicates(subset=['Times'])
         print('\n\nUpdated Stats for all tweets:\n\n')
         ld2 = lexical_diversity(userDF['Tweets'])
@@ -200,7 +191,7 @@ def subsequent(api, ffSplit, eTime, ld, userDF):
         print(f"\t{postInterval} seconds apart.\n\n")
         userDF = userDF.drop_duplicates()
         userDF.to_csv('user.csv')
-        hopper(api, fSplit, eTime, ld, userDF)
+        hopper(api, userDF)
 
 
 user = sys.argv[1]
@@ -212,5 +203,7 @@ if os.path.isdir('./files') == False:
 else:
         directory = directory+'/files'
 stop_words1 = set(stopwords.words('english'))
-vectorizer = CountVectorizer()
+cVectorizer = CountVectorizer()
+tVectorizer = TfidfVectorizer()
+hVectorizer = HashingVectorizer(n_features=20)
 login() 
