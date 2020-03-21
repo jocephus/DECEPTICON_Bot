@@ -7,7 +7,6 @@ from os import path
 import sys
 import time
 from datetime import datetime
-import shutil
 import random
 #Module specific imports
 import twitter as tw
@@ -15,16 +14,16 @@ import TKEYS as KEYS
 #Data science imports
 import pandas as pd
 import numpy as np
-import scipy as scy
+#import scipy as scy
 import sklearn
-import h5py
-import tensorflow as tf
-import keras
-import collections
-from tensorflow.keras import layers
-from keras.models import Sequential
-from keras.layers import Dense, LSTM, Dropout, Bidirectional, Embedding
-from keras.callbacks import ModelCheckpoint
+#import h5py
+#import tensorflow as tf
+#import keras
+#import collections
+#from tensorflow.keras import layers
+#from keras.models import Sequential
+#from keras.layers import Dense, LSTM, Dropout, Bidirectional, Embedding
+#from keras.callbacks import ModelCheckpoint
 #NLP Imports
 import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize
@@ -46,6 +45,7 @@ def login():
         api = tw.Api(consumer_key = KEYS.CONSUMER_KEY, consumer_secret = KEYS.CONSUMER_SECRET, access_token_key = KEYS.ACCESS_TOKEN_KEY, access_token_secret = KEYS.ACCESS_TOKEN_SECRET, tweet_mode='extended')
         print("\n\nConnected to Twitter\n\n")
         print("Retrieving Tweets...\n")
+        os.chdir(directory)
         if path.exists(directory+'/files.csv') == False:
                 userDF = pd.DataFrame(columns=['Times', 'Tweets', 'LD'])
                 hopper(api, userDF)
@@ -58,6 +58,10 @@ def lexical_diversity(text):
 
 def hopper(api, userDF):
         results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
+        ps = PorterStemmer()
+        bank = []
+        lemm = []
+        stem = []
         for tweet in results:
                 fText = tweet.full_text
                 fSplit = str(fText.split(' , '))
@@ -65,21 +69,35 @@ def hopper(api, userDF):
                 mTime = time.mktime(time.strptime(tTime, "%a %b %d %H:%M:%S %z %Y"))
                 eTime = int(mTime)
                 ld = lexical_diversity(str(tweet))
-                userDF = userDF.append({'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True)
+                tokenized_tweets = sent_tokenize(fSplit)
+                for w in tokenized_tweets:
+                        if w not in stop_words1:
+                                bank.append(w)
+                for w in bank:
+                        rootWord=ps.stem(w)
+                        stem.append(rootWord)
+                for i in bank:
+                        word1 = Word(i).lemmatize("n")
+                        word2 = Word(word1).lemmatize("v")
+                        word3 = Word(word2).lemmatize("a")
+                        lemm.append(Word(word3).lemmatize())
+                userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld, 'Stemmed': rootWord, 'Lemmerized': lemm}, ignore_index=True, sort=True)
+                userDF = userDF.drop_duplicates(subset=['Times'])
+        userDF = userDF.drop_duplicates(subset=['Times'])
+        print(os.getcwd())
+        userDF.to_csv('files.csv')
         for index, r in userDF.iterrows():
                 tweets=r['Tweets']
                 times=r['Times']
-                os.chdir(directory)
-                fname=str(user)+'_'+str(times)+'.txt'
+                stem=r['Stemmed']
+                lemm=r['Lemmerized']
+                fname=str(user)+'_'+str(eTime)+'.txt'
                 corpusfile=open(fname, 'a')
-                corpusfile.write(str(tweets))
-                tokenized_tweets = sent_tokenize(str(tweets))
+                corpusfile.write('Time: '+str(times))
+                corpusfile.write('\nTweets:'+str(tweets))
+                corpusfile.write('\nStemmed:'+str(stem))
+                corpusfile.write('\nLemmerized:'+str(lemm))
                 corpusfile.close()
-                f1name=str(user)+'.txt'
-                userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True, sort=True)
-                userDF = userDF.drop_duplicates()
-        userDF = userDF.drop_duplicates(subset=['Times'])
-        userDF.to_csv('files.csv')
         print(f"Stats for {user}'s tweets:\n\n")
         ld2 = lexical_diversity(userDF['Tweets'])
         print(f"\nThe Lexical Diversity of {user}'s Tweets is:\t\t\t{ld2}")
@@ -91,14 +109,14 @@ def hopper(api, userDF):
         print(f"\n\n{user}'s Tweets occur at this interval:\t\n")
         postInterval = int(timeStdDev)
         print(f"\t{postInterval} seconds apart.\n\n")
-        user_languagePreprocessing(api, fSplit, eTime, ld, userDF)
+        bagOWords1(api, fSplit, eTime, ld, userDF)
 
 def gonogo(api, fSplit, eTime, ld, userDF):
         gonogo = input("Continue? (Y/N)")
         if gonogo.lower() == 'y':
                 print("Sleeping for 4 hours")
                 time.sleep(10)
-                subsequent(api, directory, fSplit, eTime, ld, userDF)
+                subsequent(api, fSplit, eTime, ld, userDF)
         else:
                 print("Goodbye")
                 exit()
@@ -109,75 +127,39 @@ def repeater(api, fSplit, eTime, ld, userDF, postInterval):
         time.sleep(sleeping_interval)
         subsequent(api, fSplit, eTime, ld, userDF)
 
-def user_languagePreprocessing(api, fSplit, eTime, ld, userDF):
-        ps = PorterStemmer()
-        bank = []
-        stem = []
-        lemm = []
-        new_userDF = pd.DataFrame(columns=['Times', 'Original', 'Stemmed', 'Lemmerized'])
-        print("Beginning NLP Analysis...")
-        print("\n")
-        userDF= pd.read_csv('files.csv')
-        for index, r in userDF.iterrows():
-                tweets=r['Tweets']
-                tokenized_tweets = word_tokenize(str(tweets))
-                for w in tokenized_tweets:
-                        if w not in stop_words1:
-                                bank.append(w)
-        for w in bank:
-                rootWord=ps.stem(w)
-                stem.append(rootWord)
-        for i in bank:
-                word1 = Word(i).lemmatize("n")
-                word2 = Word(word1).lemmatize("v")
-                word3 = Word(word2).lemmatize("a")
-                lemm.append(Word(word3).lemmatize())
-                new_userDF.append({'Times': eTime, 'Original': tweets, 'Stemmed': rootWord, 'Lemmerized': lemm}, ignore_index=True, sort=True)
-        new_userDF = new_userDF.drop_duplicates(subset=['Times'])
-        new_userDF.to_csv(os.path.join(directory, 'new_files.csv'))
-        bagOWords1(api, fSplit, eTime, ld, userDF)
-
 # Work here
 def bagOWords1(api, fSplit, eTime, ld, userDF):
-        os.chdir(directory)
-        new_userDF = pd.read_csv('new_files.csv')
-        for index, r in new_userDF.iterrows():
+        print("Beginning NLP Analysis...")
+        print('\n\nOnto the fun stuff...\n\n')
+        print(os.getcwd())
+        userDF = pd.read_csv('files.csv')
+        print('\n\n\t\tStarting with the Original Tweets...\n\n')
+        for index, r in userDF.iterrows():
                 tweets=r['Tweets']
-                print('Printing data for Original Tweets')
+                #print('Printing data for Original Tweets')
                 tweets = [str(tweets)]
                 vectorizer.fit(tweets)
-                print(vectorizer.vocabulary_)
-                vector = vectorizer.transform(tweets)
-                print(vector.shape)
-                print(type(vector))
-                print(vector.toarray())
-                bagOWords2(api, fSplit, eTime, ld, userDF)
+        print(vectorizer.vocabulary_)
+        vector = vectorizer.transform(tweets)
+        print(vector.shape)
+        print(type(vector))
+        print(vector.toarray())
+        bagOWords2(api, fSplit, eTime, ld, userDF)
 
 def bagOWords2(api, fSplit, eTime, ld, userDF):
-        for index, r in new_userDF.iterrows():
-                stemmed=r['Stemmed']
-                print('Printing data for Stemmed Tweets')
-                stemmed = [str(stemmed)]
-                vectorizer.fit(stemmed)
-                print(vectorizer.vocabulary_)
-                vector = vectorizer.transform(stemmed)
-                print(vector.shape)
-                print(type(vector))
-                print(vector.toarray())
-                bagOWords3(api, fSplit, eTime, ld, userDF)
-
-def bagOWords3(api, fSplit, eTime, ld, userDF):
-        for index, r in new_userDF.iterrows():
+        for index, r in userDF.iterrows():
                 lemmerized=r['Lemmerized']
-                print('Printing data for Lemmerized Tweets')
+                #print('Printing data for Lemmerized Tweets')
                 lemmerized = [str(lemmerized)]
                 vectorizer.fit(lemmerized)
-                print(vectorizer.vocabulary_)
-                vector = vectorizer.transform(lemmerized)
-                print(vector.shape)
-                print(type(vector))
-                print(vector.toarray())
+        print(vectorizer.vocabulary_)
+        vector = vectorizer.transform(lemmerized)
+        print(vector.shape)
+        print(type(vector))
+        print(vector.toarray())
         gonogo(api, fSplit, eTime, ld, userDF)
+
+
 
 def subsequent(api, ffSplit, eTime, ld, userDF):
         results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
@@ -185,17 +167,26 @@ def subsequent(api, ffSplit, eTime, ld, userDF):
         print("\n")
         userDF = pd.read_csv('files.csv')
         for tweet in results:
-                tweets=userDF['Tweets']
-                os.chdir(directory)
-                fname=str(user)+'_'+str(times)+'.txt'
+                fText = tweet.full_text
                 fSplit = str(fText.split(' , '))
                 tTime = tweet.created_at #Getting the UTC time
                 mTime = time.mktime(time.strptime(tTime, "%a %b %d %H:%M:%S %z %Y"))
                 eTime = int(mTime)
                 ld = lexical_diversity(str(tweet))
-                userDF = userDF.append({'Tweets': fSplit, 'Times': eTime, 'LD': ld}, ignore_index=True, sort=True)
-                #user_df(directory, userDF, fSplit, eTime, ld)
-                userDF1 = userDF.drop_duplicates(subset=['Times'])
+                tokenized_tweets = sent_tokenize(fSplit)
+                for w in tokenized_tweets:
+                        if w not in stop_words1:
+                                bank.append(w)
+                for w in bank:
+                        rootWord=ps.stem(w)
+                        stem.append(rootWord)
+                for i in bank:
+                        word1 = Word(i).lemmatize("n")
+                        word2 = Word(word1).lemmatize("v")
+                        word3 = Word(word2).lemmatize("a")
+                        lemm.append(Word(word3).lemmatize())
+                userDF = userDF.append({'User': user, 'Tweets': fSplit, 'Times': eTime, 'LD': ld, 'Stemmed': rootWord, 'Lemmerized': lemm}, ignore_index=True, sort=True)
+                userDF = userDF.drop_duplicates(subset=['Times'])
         userDF = userDF1.drop_duplicates(subset=['Times'])
         print('\n\nUpdated Stats for all tweets:\n\n')
         ld2 = lexical_diversity(userDF['Tweets'])
@@ -209,7 +200,7 @@ def subsequent(api, ffSplit, eTime, ld, userDF):
         print(f"\t{postInterval} seconds apart.\n\n")
         userDF = userDF.drop_duplicates()
         userDF.to_csv('user.csv')
-        user_languagePreprocessing(api, fSplit, eTime, ld, userDF)
+        hopper(api, fSplit, eTime, ld, userDF)
 
 
 user = sys.argv[1]
