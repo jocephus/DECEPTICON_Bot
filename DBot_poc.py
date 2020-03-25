@@ -6,6 +6,7 @@ import os.path
 from os import path
 import sys
 import time
+import re
 from datetime import datetime
 import random
 #Module specific imports
@@ -50,15 +51,35 @@ def login():
         os.chdir(directory)
         if path.exists(directory+'/files.csv') == False:
                 userDF = pd.DataFrame(columns=['User', 'Tweets', 'Times', 'LD', 'Stemmed', 'Lemmerized'])
-                hopper(api, userDF)
+                #hopper(api, userDF)
+                tokenization(api, userDF)
         else:
                 userDF = pd.read_csv(os.path.join(directory, 'files.csv'))
-                hopper(api, userDF)
+                #hopper(api, userDF)
+                tokenization(api, userDF)
 
 def lexical_diversity(text):
         return len(set(text)) / len(text)
 
-def hopper(api, userDF):
+def word_extraction(sentence):
+        ignore = ['a', 'the', 'is']
+        words = re.sub("[^\w]", " ", sentence).split()
+        cleaned_text = [w.lower() for w in words if w not in ignore]
+        return cleaned_text
+
+def tokenization(api, userDF):
+        results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
+        words = []
+        for tweet in results:
+                fText = tweet.full_text
+                fSplit = str(fText.split(' , '))
+                wext = word_extraction(fSplit)
+                words.extend(wext)
+        words = sorted(list(set(words)))
+        #print(words)
+        hopper(words, api, userDF)
+
+def hopper(words, api, userDF):
         results = api.GetUserTimeline(include_rts=False, count=200, exclude_replies=True)
         ps = PorterStemmer()
         bank = []
@@ -72,7 +93,7 @@ def hopper(api, userDF):
                 eTime = int(mTime)
                 ld = lexical_diversity(str(tweet))
                 tokenized_tweets = sent_tokenize(fSplit)
-                for w in tokenized_tweets:
+                for w in words:
                         if w not in stop_words1:
                                 bank.append(w)
                 for w in bank:
@@ -128,7 +149,6 @@ def repeater(api, fSplit, eTime, ld, userDF, postInterval):
         time.sleep(sleeping_interval)
         subsequent(api, fSplit, eTime, ld, userDF)
 
-# Work here
 def bagOWords1(api, fSplit, eTime, ld, userDF):
         print("Beginning NLP Analysis...")
         print('\n\nOnto the fun stuff...\n\n')
