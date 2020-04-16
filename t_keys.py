@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-CONSUMER_KEY = '' 
-CONSUMER_SECRET = '' 
-ACCESS_TOKEN_KEY = '' 
-ACCESS_TOKEN_SECRET = ''
+consumer_key = '' 
+consumer_secret = '' 
+access_token_key = '' 
+access_token_secret = ''
