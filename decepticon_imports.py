@@ -33,4 +33,4 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import HashingVectorizer
 #Module specific imports
 import twitter as tw
-import TKEYS as KEYS
+import t_keys as keys
