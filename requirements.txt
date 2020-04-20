@@ -7,5 +7,4 @@ h5py
 tensorflow
 keras
 nltk
-collections
 spacy
