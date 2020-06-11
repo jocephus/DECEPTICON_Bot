@@ -105,7 +105,7 @@ def sorter(full_text, user_df):
     INTER = []
     global BOW
     BOW = []
-    nlp = spacy.load('en_core_web_md')
+    nlp = spacy.load('en_core_web_sm')
     print('Beginning to tokenize tweets..\n\n')
     i = 1
     for index, r in user_df.iterrows():
@@ -200,28 +200,22 @@ def premodeling(X, y):
     """
     print('Creating the statistical model...\n\n')
     global MODEL
+    MODEL = Sequential()
     filename = 'model_weights_saved.hdf5'
+    global FILENAME
+    FILENAME = filename
     if path.exists(filename):
-        FILENAME = filename
-        global FILENAME
         MODEL.load_weights(filename)
         modeling(X, y)
     else:
         modeling(X, y)
     
 def modeling(X, y):
-    MODEL = Sequential()
     MODEL.add(LSTM(256, input_shape=(X.shape[1], X.shape[2]), return_sequences=True))
     MODEL.add(Dropout(0.2))
     MODEL.add(LSTM(256, return_sequences=True))
     MODEL.add(Dropout(0.2))
     MODEL.add(LSTM(256))
-    MODEL.add(Dropout(0.2))
-    MODEL.add(LSTM(256))
-    MODEL.add(Dropout(0.2))
-    MODEL.add(LSTM(256))
-    MODEL.add(Dropout(0.2))
-    MODEL.add(LSTM(128))
     MODEL.add(Dropout(0.2))
     MODEL.add(Dense(y.shape[1], activation='softmax'))
     MODEL.compile(loss='categorical_crossentropy', optimizer='adam')
