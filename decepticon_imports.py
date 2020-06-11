@@ -23,6 +23,7 @@ from keras.preprocessing.text import text_to_word_sequence
 from keras.preprocessing.text import one_hot
 #Spacy
 import spacy
+import en_core_web_sm
 from spacy.lang.en.stop_words import STOP_WORDS
 #NLP Imports
 import nltk
