@@ -1,0 +1,10 @@
+pandas
+numpy
+scipy
+sklearn
+pillow
+h5py
+tensorflow
+keras
+nltk
+spacy
