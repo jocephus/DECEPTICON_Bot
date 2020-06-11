@@ -8,17 +8,24 @@ import sys
 import re
 import time
 import random
-import heapq
-import pickle
 #Data science imports
 import pandas as pd
 import numpy as np
+#AIML imports
+import tensorflow as tf
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, LSTM
+from keras.utils import np_utils
+from keras.callbacks import ModelCheckpoint
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from keras.preprocessing.text import text_to_word_sequence
+from keras.preprocessing.text import one_hot
+#Spacy
+import spacy
+from spacy.lang.en.stop_words import STOP_WORDS
 #NLP Imports
 import nltk
-from nltk.tokenize import word_tokenize, sent_tokenize
-from nltk.corpus import stopwords, PlaintextCorpusReader
-from nltk.parse.generate import generate
-from nltk import ConditionalFreqDist
 #Module specific imports
 import twitter as tw
 import t_keys as keys
