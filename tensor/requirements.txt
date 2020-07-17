@@ -3,8 +3,8 @@ numpy
 scipy
 sklearn
 pillow
-h5py
-tensorflow
+#h5py
+#tensorflow
 keras
 nltk
-spacy
+python-twitter
