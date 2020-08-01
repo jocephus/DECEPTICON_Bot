@@ -4,7 +4,6 @@ scipy
 sklearn
 pillow
 h5py
-#tensorflow
 keras
 nltk
 python-twitter
