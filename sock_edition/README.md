@@ -5,8 +5,8 @@ If running this on a Jetson Nano, you will need to get their version of Tensorfl
 Everything else is installed with `python3 -m pip install -r requirements.txt`
 
 ## Defining Source Accounts:
-You will need to enter accounts enclosed in `'` on line 29. An example is:
-`USERS = ['Dc865_owL']`
+You will need to enter accounts enclosed in `'` on line 29. Multiple accounts are separated with a comma. An example is:
+`USERS = ['Dc865_owL', 'hopeconf']`
 
 ## About DECEPTICON Bot
 When we see the terms Natural Language Processing (NLP) or Machine Learning (ML), often, our guts are correct, and it is vendor marketing material, frequently containing FUD. After tinkering with various libraries in Python and R with the use of some OSINT and SOCMINT techniques, I have found a use for NLP and ML that is 100% FUD free in the form of a brand new, Python-based tool.
