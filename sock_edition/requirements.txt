@@ -1,0 +1,9 @@
+pandas
+numpy
+scipy
+sklearn
+pillow
+h5py
+keras
+nltk
+python-twitter
