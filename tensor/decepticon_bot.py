@@ -216,13 +216,13 @@ def premodeling(X, y):
     if path.exists('model.json'):
         json_file = open('model.json', 'r')
         loaded_model_json = json_file.read()
-        json_file.close()
         loaded_model = model_from_json(loaded_model_json)
         loaded_model.load_weights('model.h5')
         loaded_model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
         filepath = 'model.h5'
         checkpoint = ModelCheckpoint(filepath, monitor='loss', verbose=1, \
         save_best_only=True, mode='min')
+        json_file.close()
         with tf.device('/gpu:0'):
             MODEL.fit(X, y, epochs=5, batch_size=32, callbacks=checkpoint)
             MODEL.load_weights(FILENAME)
